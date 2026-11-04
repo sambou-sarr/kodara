@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Journal d'événements first-party, sans cookie ni IP stockée :
+// visitorId = hash(sel + jour + IP + user-agent), donc non réversible et non traçable d'un jour à l'autre.
+// type : "pageview" | "ad_start" | "ad_complete" | "download"
+model Event {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  type      String
+  path      String?
+  visitorId String
+  source    String? // renseigné uniquement sur la page d'entrée d'une visite
+  country   String?
+  device    String? // mobile | tablet | desktop
+  browser   String?
+  os        String?
+  meta      String? // ex. format du téléchargement (png, svg…)
+
+  @@index([type, createdAt])
+  @@index([createdAt])
+}
+
+// Une « vue de pub » : créée au début, validée côté serveur après la durée minimale,
+// consommée une seule fois par un téléchargement.
+model AdView {
+  id          String    @id @default(cuid())
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  consumedAt  DateTime?
+  visitorId   String
+  provider    String
+
+  @@index([startedAt])
+}
